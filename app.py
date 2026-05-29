@@ -137,18 +137,23 @@ def dl_task(job):
     out_tmpl = str(dest / final_name.replace(f".{fmt}", ".%(ext)s"))
 
     if fmt == "mp3":
-        fs = "bestaudio/best"
-    elif qual == "best":
-        # H.264 preferred for compatibility
-        fs = (
-            f"bestvideo[vcodec^=avc1][ext=mp4][fps<={fps}]+bestaudio[acodec^=mp4a][ext=m4a]"
-            f"/best[ext=mp4]/bestvideo[fps<={fps}]+bestaudio/best"
-        )
+        fs_candidates = ["bestaudio/best"]
     else:
-        fs = (
-            f"bestvideo[vcodec^=avc1][ext=mp4][height<={qual}][fps<={fps}]+bestaudio[acodec^=mp4a][ext=m4a]"
-            f"/bestvideo[height<={qual}][fps<={fps}]+bestaudio/best"
-        )
+        # Try strict H.264/MP4 first, then loosen the constraints if YouTube
+        # does not expose that exact combination for the requested clip.
+        if qual == "best":
+            fs_candidates = [
+                f"bestvideo[vcodec^=avc1][fps<={fps}]+bestaudio[acodec^=mp4a]/best[ext=mp4]/bestvideo[fps<={fps}]+bestaudio/best",
+                f"bestvideo[fps<={fps}]+bestaudio/best",
+                "best",
+            ]
+        else:
+            fs_candidates = [
+                f"bestvideo[vcodec^=avc1][height<={qual}][fps<={fps}]+bestaudio[acodec^=mp4a]/bestvideo[height<={qual}][fps<={fps}]+bestaudio/best",
+                f"bestvideo[height<={qual}][fps<={fps}]+bestaudio/best",
+                f"bestvideo[height<={qual}]+bestaudio/best",
+                "best",
+            ]
 
     postproc = []
     if fmt == "mp3":
@@ -161,7 +166,7 @@ def dl_task(job):
         }]
 
     opts = apply_yt_opts({
-        "format": fs,
+        "format": fs_candidates[0],
         "force_keyframes_at_cuts": True,
         "external_downloader": "ffmpeg",
         "external_downloader_args": {
@@ -200,7 +205,19 @@ def dl_task(job):
 
     try:
         with __import__("yt_dlp").YoutubeDL(opts) as ydl:
-            ydl.download([url])
+            last_exc = None
+            for candidate in fs_candidates:
+                opts["format"] = candidate
+                try:
+                    ydl.download([url])
+                    last_exc = None
+                    break
+                except Exception as inner_exc:
+                    last_exc = inner_exc
+                    if "Requested format is not available" not in str(inner_exc):
+                        raise
+            if last_exc is not None:
+                raise last_exc
         job.update({
             "status": "complete",
             "downloaded_file": final_name,
