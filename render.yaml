@@ -8,3 +8,5 @@ services:
     envVars:
       - key: DOWNLOAD_DIR
         value: /tmp/streamlapse-downloads
+      - key: YTDLP_COOKIES_B64
+        sync: false

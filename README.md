@@ -18,3 +18,7 @@ Open `http://127.0.0.1:8080`.
 3. Render will use `render.yaml` and the Dockerfile, including ffmpeg.
 
 Generated clips are stored in `/tmp` on Render and served through the browser download button. Render free instances have temporary storage, so download files soon after creating them.
+
+## YouTube verification on Render
+
+If YouTube shows a "not a bot" / cookies error on Render, export cookies from your browser as a Netscape `cookies.txt` file, base64 encode it, and set it as the `YTDLP_COOKIES_B64` environment variable in Render. Redeploy after saving the variable.

@@ -3,12 +3,14 @@ import re
 import shutil
 import threading
 import uuid
+import base64
 from pathlib import Path
 from flask import Flask, request, jsonify, render_template_string, send_from_directory
 
 app = Flask(__name__)
 BASE_DIR = Path(__file__).resolve().parent
 DOWNLOAD_DIR = Path(os.environ.get("DOWNLOAD_DIR", BASE_DIR / "Downloads")).resolve()
+COOKIES_PATH = Path(os.environ.get("YTDLP_COOKIES_FILE", "/tmp/yt-dlp-cookies.txt"))
 
 
 def find_ffmpeg_dir():
@@ -25,6 +27,38 @@ def find_ffmpeg_dir():
     for exe in winget_root.glob("Gyan.FFmpeg_*/*/bin/ffmpeg.exe"):
         return exe.parent
     return None
+
+
+def get_cookiefile():
+    cookie_b64 = os.environ.get("YTDLP_COOKIES_B64", "").strip()
+    if cookie_b64:
+        COOKIES_PATH.parent.mkdir(parents=True, exist_ok=True)
+        COOKIES_PATH.write_bytes(base64.b64decode(cookie_b64))
+        return str(COOKIES_PATH)
+
+    cookie_file = os.environ.get("YTDLP_COOKIES_FILE", "").strip()
+    if cookie_file and Path(cookie_file).exists():
+        return cookie_file
+    return None
+
+
+def apply_yt_opts(opts):
+    opts.setdefault("quiet", True)
+    opts.setdefault("no_warnings", True)
+    opts.setdefault("extractor_args", {"youtube": {"player_client": ["android", "web"]}})
+    cookiefile = get_cookiefile()
+    if cookiefile:
+        opts["cookiefile"] = cookiefile
+    return opts
+
+
+def friendly_error(exc):
+    msg = str(exc)
+    if "Sign in to confirm" in msg or "not a bot" in msg or "cookies" in msg:
+        return "YouTube is asking for verification on Render. Add YTDLP_COOKIES_B64 in Render environment variables, then redeploy."
+    if "ffmpeg" in msg.lower():
+        return "FFmpeg is missing or unavailable. Redeploy the Docker service or check Render build logs."
+    return msg[:320]
 
 # --- Global download queue ---
 download_queue = []  # list of job dicts
@@ -126,7 +160,7 @@ def dl_task(job):
             "preferedformat": fmt,
         }]
 
-    opts = {
+    opts = apply_yt_opts({
         "format": fs,
         "force_keyframes_at_cuts": True,
         "external_downloader": "ffmpeg",
@@ -159,7 +193,7 @@ def dl_task(job):
                 "-movflags", "+faststart"
             ] if fmt != "mp3" else []
         },
-    }
+    })
     if fmt == "mp3":
         opts["postprocessors"] = [{"key": "FFmpegExtractAudio", "preferredcodec": "mp3", "preferredquality": "192"}]
         del opts["postprocessor_args"]
@@ -174,7 +208,7 @@ def dl_task(job):
             "percent": 100,
         })
     except Exception as e:
-        job.update({"status": "error", "error_msg": str(e)})
+        job.update({"status": "error", "error_msg": friendly_error(e)})
 
 
 HTML_TEMPLATE = r"""<!DOCTYPE html>
@@ -1078,7 +1112,7 @@ def analyze_api():
     import yt_dlp
     url = request.json.get("url", "").strip()
     try:
-        opts = {"quiet": True, "no_warnings": True}
+        opts = apply_yt_opts({})
         with yt_dlp.YoutubeDL(opts) as ydl:
             info = ydl.extract_info(url, download=False)
             fmts = info.get("formats", [])
@@ -1097,7 +1131,7 @@ def analyze_api():
                 "resolutions": res,
             })
     except Exception as e:
-        return jsonify({"success": False, "error": str(e)})
+        return jsonify({"success": False, "error": friendly_error(e)})
 
 
 @app.route("/api/progress")
