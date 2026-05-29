@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: streamlapse
+    runtime: docker
+    plan: free
+    autoDeploy: true
+    healthCheckPath: /healthz
+    envVars:
+      - key: DOWNLOAD_DIR
+        value: /tmp/streamlapse-downloads
