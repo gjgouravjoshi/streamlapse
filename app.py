@@ -209,10 +209,11 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     color: var(--text);
     font-family: var(--sans);
     min-height: 100vh;
+    min-height: 100dvh;
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: center;
-    padding: 32px 16px 80px;
+    padding: 24px 16px;
   }
 
   /* subtle grid bg */
@@ -230,13 +231,14 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 
   .wrap {
     position: relative; z-index: 1;
-    width: 100%; max-width: 520px;
+    width: 100%; max-width: 560px;
     display: flex; flex-direction: column; gap: 14px;
+    margin: auto;
   }
 
   /* ── LOGO ── */
   .logo {
-    display: flex; align-items: center; gap: 10px;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
     padding: 6px 0 2px;
   }
   .logo-icon {
@@ -539,6 +541,18 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     font-size: 12px; color: var(--muted);
   }
 
+  .contact {
+    text-align: center;
+    font-size: 11px;
+    color: var(--muted);
+    padding: 2px 0 0;
+  }
+  .contact a {
+    color: var(--blue);
+    text-decoration: none;
+  }
+  .contact a:hover { text-decoration: underline; }
+
   /* ── TOAST ── */
   #toast {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
@@ -557,6 +571,80 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
 
   .hidden { display: none !important; }
+
+  @media (max-width: 560px) {
+    body {
+      align-items: flex-start;
+      padding: 14px 10px 24px;
+    }
+    .wrap {
+      max-width: none;
+      gap: 12px;
+    }
+    .logo {
+      padding-top: 2px;
+    }
+    .card {
+      border-radius: 12px;
+      padding: 14px;
+      gap: 14px;
+    }
+    .input-row,
+    .btn-row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .btn-analyze,
+    .btn-add,
+    .btn-dl {
+      width: 100%;
+      justify-content: center;
+      min-height: 42px;
+    }
+    .grid3 {
+      grid-template-columns: 1fr;
+    }
+    .grid2 {
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .thumb-row {
+      align-items: flex-start;
+    }
+    .thumb-row img {
+      width: 96px;
+      height: 58px;
+    }
+    .seg-item {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 7px;
+    }
+    .seg-name {
+      grid-column: 1 / -1;
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+    .seg-bar-wrap {
+      grid-column: 1 / -1;
+      flex-basis: auto;
+      width: 100%;
+    }
+    .recent-item {
+      gap: 8px;
+      padding: 10px 12px;
+    }
+    .ri-name {
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+    #toast {
+      width: calc(100% - 24px);
+      max-width: 420px;
+      white-space: normal;
+      text-align: center;
+    }
+  }
 </style>
 </head>
 <body>
@@ -675,6 +763,10 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
         No clips yet this session
       </div>
     </div>
+  </div>
+
+  <div class="contact">
+    Contact: <a href="mailto:gjgourav708@gmail.com">gjgourav708@gmail.com</a>
   </div>
 
 </div>
